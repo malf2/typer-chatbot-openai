@@ -2,9 +2,14 @@ import typer
 from openai import OpenAI
 from openai.types.conversations.conversation import Conversation
 from openai.types.responses.response import Response
+from openai.types.responses.response_stream_event import ResponseStreamEvent
+from rich.markdown import Markdown
+from rich.live import Live
+from rich.console import Console
 
 app = typer.Typer()
 client = OpenAI()
+console = Console()
 
 def chat(user_input: str, history: list[dict]) -> str:
 
@@ -21,16 +26,17 @@ def chat(user_input: str, history: list[dict]) -> str:
     return response.output_text
 
 
-def chat_with_conversations(user_input: str, conversation: Conversation, system_prompt: str) -> str:
+def chat_with_conversations(user_input: str, conversation: Conversation, system_prompt: str):
 
-    response: Response = client.responses.create(
+    stream = client.responses.create(
         model="gpt-4o-mini",
         input=[{"role": "developer", "content": system_prompt}, 
                {"role": "user", "content": user_input}],
-        conversation=conversation.id
+        conversation=conversation.id,
+        stream=True,
     )
 
-    return response.output_text
+    return stream
 
 
 
@@ -49,8 +55,16 @@ def start_chat(system_prompt: str = "You are a helpful assistant."):
             typer.echo("Goodbye!")
             raise typer.Exit()
         
-        response = chat_with_conversations(user_input, conversation, system_prompt)
-        typer.echo(f"Assistant: {response}\n")
+        stream = chat_with_conversations(user_input, conversation, system_prompt)
+        output = "Assistant: "
+        with Live("", console=console, refresh_per_second=20) as live:
+            for chunk in stream:
+                if chunk.type == "response.output_text.delta":
+                    output += chunk.delta
+                    live.update(Markdown(output))
+
+
+        # typer.echo(f"Assistant: {response}\n")
 
 
 if __name__ == "__main__":
