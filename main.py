@@ -1,6 +1,7 @@
 import typer
 from openai import OpenAI
 from openai.types.conversations.conversation import Conversation
+from openai.types.responses.response import Response
 
 app = typer.Typer()
 client = OpenAI()
@@ -9,7 +10,7 @@ def chat(user_input: str, history: list[dict]) -> str:
 
     history.append({"role": "user", "content": user_input})
 
-    response = client.responses.create(
+    response: Response = client.responses.create(
         model="gpt-4o-mini",
         input=history,
         store=False
@@ -22,7 +23,7 @@ def chat(user_input: str, history: list[dict]) -> str:
 
 def chat_with_conversations(user_input: str, conversation: Conversation, system_prompt: str) -> str:
 
-    response = client.responses.create(
+    response: Response = client.responses.create(
         model="gpt-4o-mini",
         input=[{"role": "developer", "content": system_prompt}, 
                {"role": "user", "content": user_input}],
